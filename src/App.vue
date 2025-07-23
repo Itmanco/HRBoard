@@ -185,7 +185,7 @@ import LoginModal from "./components/LoginModal.vue";
 import ProblemSelectTest from './components/ProblemSelectTest.vue'; // Import it
 import EditIcon from "./assets/icons/edit.svg";
 import DeleteIcon from "./assets/icons/delete.svg";
-import InterviewIcon from "./assets/icons/Interview.svg";
+import InterviewIcon from "./assets/icons/interview.svg";
 import Logo from "./assets/logo2.png";
 
 
