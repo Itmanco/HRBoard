@@ -22,22 +22,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Use the latest version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4 # Use the latest version
+        with:
+          node-version: '20' # Or your desired Node.js version (e.g., '18', '20')
+          cache: 'npm' # Caches npm dependencies to speed up subsequent runs
+
+      - name: Install dependencies
+        run: npm ci # 'npm ci' is preferred over 'npm install' in CI environments
+
+      - name: Build project # <--- ADD THIS STEP!
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3 # Use the latest version
+        with:
+          path: './dist' # This should match the output folder of 'npm run build'
+
   # Single deploy job since we're just deploying
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    needs: build # This ensures the 'build' job completes successfully first
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Upload entire repository
-          path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v4 # Use the latest version
