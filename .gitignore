@@ -7,9 +7,15 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Build outputs
+/dist/
+/build/
+
+# Dependency directories
 node_modules
+jspm_packages/
+
 .DS_Store
-dist
 dist-ssr
 coverage
 *.local
