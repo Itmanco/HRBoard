@@ -6,7 +6,7 @@
         <span>ログインユーザー：
           <br />
           <strong>{{ sanitizeDisplayValue(loggedInUser.displayName) || sanitizeDisplayValue(loggedInUser.email) }}</strong></span>
-        <button @click="logoutUser" class="logout-btn">Logout</button>
+        <button @click="logoutUser" class="logout-btn">ログアウト</button>
       </div>
       <div v-else class="auth-info">
         <span>応募者管理のため、ログインをお願いいたします。</span>
@@ -22,7 +22,7 @@
 
     <nav :class="['side-menu', { 'is-open': showMenu }]">
       <div class="menu-header">
-        <h3>Menu</h3>
+        <h3>メニュー</h3>
         <button @click="toggleMenu" class="close-menu-btn">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="close-icon">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -34,7 +34,7 @@
         <li><a href="#" @click.prevent="toggleMenu()">応募者一覧表示</a></li>
         <li><a href="#" @click.prevent="openManagePositionsModal()">募集職管理</a></li>
         <li><a href="#" @click.prevent="openManageQuestionsModal()">設問管理</a></li>
-        <li v-if="loggedInUser"><a href="#" @click.prevent="logoutUser">Logout</a></li>
+        <li v-if="loggedInUser"><a href="#" @click.prevent="logoutUser">ログアウト</a></li>
       </ul>
     </nav>
     <div class="container">    
@@ -44,6 +44,7 @@
             @click="showAddApplicantModal = true"
             :disabled="availablePositions.length === 0"  
             class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
+            v-if="availablePositions.length > 0"
           >
             新規応募者追加
           </button>
@@ -81,7 +82,7 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="cv-link"
-                    >View CV</a
+                    >履歴書を表示</a
                   >
                   <span v-else>N/A</span>
                 </td>
@@ -375,7 +376,7 @@ export default {
     async logoutUser() {
       try {
         await signOut(auth);
-        alert("Logged out successfully!");
+        alert("ログアウトしました！");
         this.showMenu = false; // Close menu on logout
         this.showLoginModal = true;
       } catch (error) {
@@ -491,7 +492,7 @@ export default {
     async deleteApplicant(id) {
       if (
         confirm(
-          "Are you sure you want to delete this applicant? This will also delete their associated CV file."
+          "この応募者を削除しますか？関連する履歴書ファイルも削除されます。"
         )
       ) {
         try {
@@ -540,7 +541,7 @@ export default {
         } catch (error) {
           console.error("Error deleting applicant or CV: ", error);
           alert(
-            "Failed to delete applicant or associated CV. Please try again."
+            "応募者または関連CVの削除に失敗しました。再度お試しください。"
           );
         }
       }

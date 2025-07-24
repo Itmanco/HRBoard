@@ -1,7 +1,7 @@
 <template>
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
-      <h2 class="text-center text-blue-600 mb-6">Manage Interview Questions</h2>
+      <h2 class="text-center text-blue-600 mb-6">面接の質問を管理</h2>
 
       <!-- Add New Question Button -->
       <div class="flex justify-end mb-4">
@@ -9,7 +9,7 @@
           @click="openAddEditQuestionModal(null, 'add')"
           class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300"
         >
-          Add New Question
+          新しい質問を追加
         </button>
       </div>
 
@@ -40,11 +40,11 @@
           </tbody>
         </table>
       </div>
-      <p v-else class="text-center text-gray-500 py-8">No questions added yet.</p>
+      <p v-else class="text-center text-gray-500 py-8">まだ質問は追加されていません。</p>
 
       <!-- Close Button for Manage Questions Modal -->
       <div class="modal-actions mt-6">
-        <button type="button" @click="closeModal" class="cancel-btn">Close</button>
+        <button type="button" @click="closeModal" class="cancel-btn">閉じる</button>
       </div>
     </div>
 
@@ -146,11 +146,11 @@ export default {
       this.closeAddEditQuestionSubModal(); // Close the sub-modal
     },
     async deleteQuestion(questionId) {
-      if (!confirm("Are you sure you want to delete this question? This action cannot be undone.")) {
+      if (!confirm("この質問を削除しますか？この操作は元に戻せません。")) {
         return;
       }
       if (!this.loggedInUser) {
-        alert("You must be logged in to delete questions.");
+        alert("質問を削除するにはログインが必要です。");
         return;
       }
 
@@ -161,7 +161,7 @@ export default {
         await this.fetchQuestions(); // Re-fetch questions to update the list
       } catch (error) {
         console.error("Error deleting question:", error);
-        alert("Failed to delete question. Please try again.");
+        alert("質問の削除に失敗しました。再度お試しください。");
       }
     },
   },

@@ -1,22 +1,22 @@
 <template>
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
-      <h2>{{ isLoginMode ? "Login" : "Register" }}</h2>
+      <h2>{{ isLoginMode ? "ログイン" : "登録" }}</h2>
 
       <form @submit.prevent="isLoginMode ? loginUser() : registerUser()">
         <div class="form-group" v-if="!isLoginMode">
-          <label for="authName">Name:</label>
+          <label for="authName">氏名:</label>
           <input type="text" id="authName" v-model="authName" required />
         </div>
 
         <div class="form-group">
-          <label for="authEmail">Email:</label>
+          <label for="authEmail">メールアドレス:</label>
           <input type="email" id="authEmail" v-model="authEmail" required />
         </div>
 
         <!-- MODIFIED: New structure for password field and toggle button -->
         <div class="form-group">
-          <label for="authPassword">Password:</label>
+          <label for="authPassword">パスワード:</label>
           <div class="input-with-button-wrapper"> 
             <input
               :type="passwordVisible ? 'text' : 'password'"
@@ -44,18 +44,19 @@
         <!-- END MODIFIED -->
 
         <button type="submit" class="submit-btn">
-          {{ isLoginMode ? "Login" : "Register" }}
+          {{ isLoginMode ? "ログイン" : "登録" }}
         </button>
       </form>
 
       <p class="toggle-mode">
         {{
           isLoginMode
-            ? "Don't have an account?"
-            : "Already have an account?"
+            ? "アカウントをお持ちでないですか？"
+            : "既にアカウントをお持ちですか？"
         }}
+        <br />
         <span @click="toggleAuthMode">{{
-          isLoginMode ? "Register here." : "Login here."
+          isLoginMode ? "こちらでご登録ください。" : "こちらからログインしてください。"
         }}</span>
       </p>
       <p v-if="authError" class="error-message">{{ authError }}</p>
@@ -126,7 +127,7 @@ export default {
         );
         const user = userCredential.user;
         await updateProfile(user, { displayName: this.authName });
-        alert("Registration successful! You are now logged in.");
+        alert("登録が完了しました！ログインしました。");
         this.$emit("login-success"); // Emit event to parent
         this.closeModal();
       } catch (error) {
@@ -142,7 +143,7 @@ export default {
           this.authEmail,
           this.authPassword
         );
-        alert("Login successful!");
+        alert("ログインしました！");
         this.$emit("login-success"); // Emit event to parent
         this.closeModal();
       } catch (error) {

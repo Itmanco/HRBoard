@@ -5,8 +5,6 @@ import { getAuth } from "firebase/auth"; // Import getAuth for authentication
 import { getStorage } from "firebase/storage";
 
 // Your Firebase configuration
-console.log('API URL:', import.meta.env.VITE_FIREBASE_API_KEY);
-console.log('API Key:', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN);
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,

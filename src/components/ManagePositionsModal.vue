@@ -1,26 +1,26 @@
 <template>
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
-      <h2>Manage Positions</h2>
+      <h2>役職を管理</h2>
 
       <div class="add-position-section">
-        <h3>Add New Position</h3>
+        <h3>新規役職を追加</h3>
         <form @submit.prevent="addPosition" class="add-position-form">
           <input
             type="text"
             v-model="newPositionName"
-            placeholder="e.g., Software Engineer, HR Manager"
+            placeholder="例：フロント、キッチン、バー"
             required
           />
-          <button type="submit" class="save-btn">Add Position</button>
+          <button type="submit" class="save-btn">役職を追加</button>
         </form>
         <p v-if="addError" class="error-message">{{ addError }}</p>
       </div>
 
       <div class="current-positions-section">
-        <h3>Current Available Positions</h3>
+        <h3>現在募集中の役職</h3>
         <p v-if="availablePositions.length === 0" class="no-positions-message">
-          No positions defined yet.
+          まだ役職が定義されていません。
         </p>
         <ul v-else class="position-list">
           <li v-for="position in availablePositions" :key="position.id">
@@ -46,7 +46,7 @@
 
       <div class="modal-actions">
         <button type="button" @click="closeModal" class="cancel-btn">
-          Close
+          閉じる
         </button>
       </div>
     </div>
@@ -89,7 +89,7 @@ export default {
     async addPosition() {
       this.addError = null;
       if (!this.newPositionName.trim()) {
-        this.addError = "Position name cannot be empty.";
+        this.addError = "役職名は空にできません。";
         return;
       }
       // Optional: Check for duplicates before adding
@@ -99,7 +99,7 @@ export default {
             p.name.toLowerCase() === this.newPositionName.trim().toLowerCase()
         )
       ) {
-        this.addError = "This position already exists.";
+        this.addError = "この役職は既に存在します。";
         return;
       }
 
@@ -112,11 +112,11 @@ export default {
         console.log("Position added!");
       } catch (error) {
         console.error("Error adding position:", error);
-        this.addError = "Failed to add position. Please try again.";
+        this.addError = "役職の追加に失敗しました。再度お試しください。";
       }
     },
     async deletePosition(positionId) {
-      if (!confirm("Are you sure you want to delete this position? This action cannot be undone.")) {
+      if (!confirm("この役職を削除しますか？この操作は元に戻せません。")) {
         return; // User cancelled
       }
 
@@ -127,7 +127,7 @@ export default {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-          alert("Cannot delete this position. There are applicants currently assigned to it.");
+          alert("この役職は削除できません。現在、応募者が割り当てられています。");
           return; // Stop deletion if applicants are found
         }
 
@@ -135,13 +135,13 @@ export default {
         const positionRef = doc(db, "positions", positionId);
         console.error("Error deleting position:", positionId);
         await deleteDoc(positionRef);
-        alert("Position deleted successfully!");
-        this.$emit("close"); // Close the modal or refresh the list
+        alert("役職を削除しました！");
+        //this.$emit("close"); // Close the modal or refresh the list
         // You might want to emit an event to the parent (App.vue) to re-fetch positions if it's not real-time
         // Or ensure App.vue's listener for positions is correctly updating.
       } catch (error) {
         console.error("Error deleting position:", error);
-        alert("Failed to delete position. Please try again.");
+        alert("役職の削除に失敗しました。再度お試しください。");
       }
     },
   },
@@ -270,7 +270,7 @@ export default {
   fill: #dc3545; /* Red color */
 }
 .delete-btn:hover .delete-icon {
-  fill: #c82333;
+  fill: #e0939a;
 }
 
 .modal-actions {

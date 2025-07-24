@@ -2,12 +2,12 @@
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
       <h2 class="text-2xl font-bold mb-6 text-center text-blue-700">
-        {{ mode === 'add' ? '新規設問追加 (Add New Question)' : '設問編集 (Edit Question)' }}
+        {{ mode === 'add' ? '新規設問追加' : '設問編集 (Edit Question)' }}
       </h2>
 
       <form @submit.prevent="handleSubmit">
         <div class="form-group mb-4">
-          <label for="questionText" class="block text-gray-700 text-sm font-bold mb-2">設問内容 (Question Text):</label>
+          <label for="questionText" class="block text-gray-700 text-sm font-bold mb-2">設問内容:</label>
           <textarea
             id="questionText"
             v-model="localQuestionText"
@@ -18,7 +18,7 @@
         </div>
 
         <div class="form-group mb-4">
-          <label class="block text-gray-700 text-sm font-bold mb-2">適用職 (Applicable Positions):</label>
+          <label class="block text-gray-700 text-sm font-bold mb-2">適用職:</label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto border p-3 rounded-md bg-gray-50">
             <div
               v-for="position in availablePositions"
@@ -38,7 +38,7 @@
               募集職がありません。先に募集職を登録してください。
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-1">※ 選択しない場合、全ての職種に適用されます。(If nothing is selected, it applies to all positions.)</p>
+          <p class="text-xs text-gray-500 mt-1">※ 選択しない場合、全ての職種に適用されます。</p>
         </div>
 
         <div class="form-group mb-6 flex items-center">
@@ -48,7 +48,7 @@
             v-model="localIsMandatory"
             class="form-checkbox h-4 w-4 text-blue-600 rounded-md"
           />
-          <label for="isMandatory" class="ml-2 text-gray-700 text-sm font-bold">必須設問 (Mandatory Question)</label>
+          <label for="isMandatory" class="ml-2 text-gray-700 text-sm font-bold">必須設問</label>
         </div>
 
         <div class="flex items-center justify-between">
@@ -56,7 +56,7 @@
             type="submit"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
           >
-            {{ mode === 'add' ? '設問追加 (Add Question)' : '設問を更新 (Update Question)' }}
+            {{ mode === 'add' ? '設問追加' : '設問を更新' }}
           </button>
         </div>
       </form>
@@ -65,7 +65,7 @@
         @click="closeModal"
         class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 w-full"
       >
-        キャンセル (Cancel)
+        キャンセル
       </button>
     </div>
   </div>

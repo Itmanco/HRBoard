@@ -2,12 +2,12 @@
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
       <h2>
-        Edit Applicant: {{ editedApplicant.fullName || editedApplicant.name }}
+        応募者を編集: {{ editedApplicant.fullName || editedApplicant.name }}
       </h2>
       <form @submit.prevent="saveChanges">
         <!-- Keep these fields -->
         <div class="form-group">
-          <label for="editName">Name:</label>
+          <label for="editName">氏名:</label>
           <input
             type="text"
             id="editName"
@@ -16,7 +16,7 @@
           />
         </div>
         <div class="form-group">
-          <label for="editEmail">Email:</label>
+          <label for="editEmail">メール:</label>
           <input
             type="email"
             id="editEmail"
@@ -25,7 +25,7 @@
           />
         </div>
         <div class="form-group">
-          <label for="editPosition">Position Applied For:</label>
+          <label for="editPosition">応募職種:</label>
           <select id="editPosition" v-model="editedApplicant.positionId" required>
             <option value="" disabled>Select a position</option>
             <option v-for="pos in availablePositions" :key="pos.id" :value="pos.id">
@@ -33,24 +33,24 @@
             </option>
           </select>
           <p v-if="availablePositions.length === 0" class="form-help">
-            No positions available. Please add some via "Manage Positions" in the main menu.
+            募集職種がありません。メインメニューの「職種管理」から追加してください。
           </p>
         </div>
         <div class="form-group">
-          <label for="editStatus">Status:</label>
+          <label for="editStatus">状態:</label>
           <select id="editStatus" v-model="editedApplicant.status">
-            <option value="New">New</option>
-            <option value="Screening">Screening</option>
-            <option value="Interview Scheduled">Interview Scheduled</option>
-            <option value="Interviewed">Interviewed</option>
-            <option value="Offer Extended">Offer Extended</option>
-            <option value="Hired">Hired</option>
-            <option value="Rejected">Rejected</option>
+             <option value="New">新規</option>
+            <option value="Screening">選考</option>
+            <option value="Interview Scheduled">面接予定</option>
+            <option value="Interviewed">面接済</option>
+            <option value="Offer Extended">内定通知</option>
+            <option value="Hired">採用</option>
+            <option value="Rejected">不採用</option>
           </select>
         </div>
         <!-- Keep Phone Number field -->
         <div class="form-group">
-          <label for="editPhone">Phone Number:</label>
+          <label for="editPhone">電話番号:</label>
           <input
             type="tel"
             id="editPhone"
@@ -59,7 +59,7 @@
         </div>
 
         <div class="form-group">
-          <label for="editCv">Upload New CV (Image or PDF):</label>
+          <label for="editCv">履歴書をアップロード（画像またはPDF）:</label>
           <input
             type="file"
             id="editCv"
@@ -67,16 +67,16 @@
             accept="image/*,application/pdf"
           />
           <p v-if="editedApplicant.cvUrl">
-            Current CV:
+            現在の履歴書:
             <a
               :href="editedApplicant.cvUrl"
               target="_blank"
               rel="noopener noreferrer"
-              >View Current CV</a
+              >現在の履歴書を表示</a
             >
           </p>
           <p v-if="newCvFile">
-            New file selected: <strong>{{ newCvFile.name }}</strong>
+            新しいファイルを選択: <strong>{{ newCvFile.name }}</strong>
           </p>
           <p
             v-if="cvUploadProgress > 0 && cvUploadProgress < 100"
@@ -87,7 +87,7 @@
           <p v-if="cvUploadError" class="error-message">{{ cvUploadError }}</p>
         </div>
         <div class="form-group">
-          <label for="editInterviewDate">Interview Date:</label>
+          <label for="editInterviewDate">面接日:</label>
           <VueDatePicker
             v-model="editedApplicant.interviewDate"
             :teleport="true"
@@ -97,12 +97,12 @@
             class="form-input"
             uid="editInterviewDate"
           ></VueDatePicker>
-          <small>Select date and time.</small>
+          <small>日時を選択</small>
         </div>
         <div class="modal-actions">
-          <button type="submit" class="save-btn">Save Changes</button>
+          <button type="submit" class="save-btn">変更を保存</button>
           <button type="button" @click="closeModal" class="cancel-btn">
-            Cancel
+            取消
           </button>
         </div>
       </form>
@@ -217,7 +217,7 @@ export default {
 
         // 2. NEW: File Size Validation
         if (this.newCvFile.size > MAX_FILE_SIZE_BYTES) {
-          this.cvUploadError = `File size exceeds the ${MAX_FILE_SIZE_MB}MB limit.`;
+          this.cvUploadError = `ファイルサイズが ${MAX_FILE_SIZE_MB}MBを超過しています。`;
           this.newCvFile = null;
           event.target.value = ""; // Clear the file input display
           return; // Stop further processing
@@ -231,7 +231,7 @@ export default {
         !this.editedApplicant.email ||
         !this.editedApplicant.positionId
       ) {
-        alert("Name, Email, and Position are required.");
+        alert("必須項目をご入力ください。");
         return;
       }
 
@@ -287,14 +287,14 @@ export default {
           }
         } catch (error) {
           console.error("Error uploading new CV:", error);
-          this.cvUploadError = "Failed to upload new CV. Please try again.";
-          alert("Failed to upload new CV. Please check console for details.");
+          this.cvUploadError = "履歴書のアップロードに失敗しました。再度お試しください。";
+          alert("履歴書のアップロードに失敗しました。再度お試しください。");
           return; // Stop execution if new CV upload fails
         }
       }
 
       if (!this.editedApplicant.positionId) {
-        alert("Please select a position.");
+        alert("有効な役職を選択してください。");
         return;
       }
 
@@ -304,7 +304,7 @@ export default {
           (p) => p.id === this.editedApplicant.positionId
         );
         if (!selectedPosition) {
-          alert("Please select a valid position.");
+          alert("有効な役職を選択してください。");
           return;
         }
 
@@ -334,7 +334,7 @@ export default {
         this.closeModal();
       } catch (error) {
         console.error("Error updating document: ", error);
-        alert("Failed to save changes. Please try again.");
+        alert("変更の保存に失敗しました。再度お試しください。");
       }
     },
   },

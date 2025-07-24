@@ -1,47 +1,47 @@
 <template>
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
-      <h2>Add New Applicant</h2>
+      <h2>新規応募者を追加</h2>
       <form @submit.prevent="handleAddApplicant">
         <div class="form-group">
-          <label for="name">Name:</label>
+          <label for="name">氏名:</label>
           <input type="text" id="name" v-model="applicantName" required />
         </div>
         <div class="form-group">
-          <label for="email">Email:</label>
+          <label for="email">メール:</label>
           <input type="email" id="email" v-model="applicantEmail" required />
         </div>
         <div class="form-group">
-        <label for="position">Position Applied For:</label>
+        <label for="position">応募職種:</label>
         <select id="position" v-model="positionApplied" required>
-          <option value="" disabled selected>Select a position</option>
+          <option value="" disabled selected>職種を選択</option>
           <option v-for="pos in localAvailablePositions" :key="pos.id"  :value="pos.id">
             {{ pos.name }}
           </option>
         </select>
         <p v-if="availablePositions.length === 0" class="form-help">
-          No positions available. Please add some via "Manage Positions" in the main menu.
+          募集職種がありません。メインメニューの「職種管理」から追加してください。
         </p>
       </div>
         <div class="form-group">
-          <label for="status">Status:</label>
+          <label for="status">状態:</label>
           <select id="status" v-model="status">
-            <option value="New">New</option>
-            <option value="Screening">Screening</option>
-            <option value="Interview Scheduled">Interview Scheduled</option>
-            <option value="Interviewed">Interviewed</option>
-            <option value="Offer Extended">Offer Extended</option>
-            <option value="Hired">Hired</option>
-            <option value="Rejected">Rejected</option>
+            <option value="New">新規</option>
+            <option value="Screening">選考</option>
+            <option value="Interview Scheduled">面接予定</option>
+            <option value="Interviewed">面接済</option>
+            <option value="Offer Extended">内定通知</option>
+            <option value="Hired">採用</option>
+            <option value="Rejected">不採用</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="applicantPhone">Phone Number:</label>
+          <label for="applicantPhone">電話番号:</label>
           <input type="tel" id="applicantPhone" v-model="applicantPhone" />
         </div>
 
         <div class="form-group">
-          <label for="applicantCv">Upload CV (Image or PDF):</label>
+          <label for="applicantCv">履歴書をアップロード（画像またはPDF）:</label>
           <input
             type="file"
             id="applicantCv"
@@ -49,7 +49,7 @@
             accept="image/*,application/pdf"
           />
           <p v-if="cvFile">
-            Selected file: <strong>{{ cvFile.name }}</strong>
+            選択中のファイル: <strong>{{ cvFile.name }}</strong>
           </p>
           <p
             v-if="cvUploadProgress > 0 && cvUploadProgress < 100"
@@ -61,7 +61,7 @@
         </div>
 
         <div class="form-group">
-          <label for="interviewDate">Interview Date:</label>
+          <label for="interviewDate">面接日:</label>
           <VueDatePicker
             v-model="interviewDate"
             :teleport="true"
@@ -71,21 +71,21 @@
             class="form-input"
             uid="addInterviewDate"
           ></VueDatePicker>
-          <small>Select date and time.</small>
+          <small>日時を選択</small>
         </div>
 
         <div class="form-group">
           <label>Simulated Submitting User:</label>
           <p>{{ simulatedSubmitter }}</p>
           <p class="form-help">
-            This field is for simulating submissions by a predefined user.
+            TODO:This field is for simulating submissions by a predefined user.
           </p>
         </div>
 
         <div class="modal-actions">
-          <button type="submit" class="save-btn">Add Applicant</button>
+          <button type="submit" class="save-btn">応募者追加</button>
           <button type="button" @click="closeModal" class="cancel-btn">
-            Cancel
+            取消
           </button>
         </div>
       </form>
@@ -195,14 +195,14 @@ export default {
           !this.cvFile.type.match("application/pdf")
         ) {
           this.cvUploadError =
-            "Only image (JPG, PNG, etc.) or PDF files are allowed.";
+            "画像・PDFのみ可";
           this.cvFile = null;
           event.target.value = "";
           return;
         }
         // File Size Validation
         if (this.cvFile.size > MAX_FILE_SIZE_BYTES) {
-          this.cvUploadError = `File size exceeds the ${MAX_FILE_SIZE_MB}MB limit.`;
+          this.cvUploadError = `ファイルサイズが ${MAX_FILE_SIZE_MB}MBを超過しています。`;
           this.cvFile = null;
           event.target.value = "";
           return;
@@ -215,12 +215,12 @@ export default {
         !this.applicantEmail ||
         !this.positionApplied
       ) {
-        alert("Please fill in all required fields (Name, Email, Position).");
+        alert("必須項目をご入力ください。");
         return;
       }
 
       if (!this.loggedInUser) {
-        alert("You must be logged in to add applicants.");
+        alert("応募者の追加にはログインが必要です。");
         return;
       }
 
@@ -241,8 +241,8 @@ export default {
           console.log("CV Download URL:", cvUrl);
         } catch (error) {
           console.error("Error uploading CV:", error);
-          this.cvUploadError = "Failed to upload CV. Please try again.";
-          alert("Failed to upload CV. Please try again.");
+          this.cvUploadError = "履歴書のアップロードに失敗しました。再度お試しください。";
+          alert("履歴書のアップロードに失敗しました。再度お試しください。");
           return;
         }
       }
@@ -253,7 +253,7 @@ export default {
       );
 
       if (!selectedPosition) {
-        alert("Please select a valid position.");
+        alert("有効な役職を選択してください。");
         return;
       }
 
@@ -284,7 +284,7 @@ export default {
         console.log("Applicant added successfully with CV!");
       } catch (error) {
         console.error("Error adding applicant: ", error);
-        alert("Failed to add applicant. Please try again.");
+        alert("応募者の追加に失敗しました。再度お試しください。");
       }
     },
   },
