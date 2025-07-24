@@ -7,7 +7,12 @@ import vue from "@vitejs/plugin-vue";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
-   base: process.env.NODE_ENV === 'production' ? '/HRBoard/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/HRBoard/' : '/',
+  build: {
+    sourcemap: true, // Enable source maps for debugging
+    // Optional: Adjust chunk size warning if needed (from your build output)
+    chunkSizeWarningLimit: 1000, // Increase limit to avoid warnings for 825 kB chunk
+  },
   server: {
     host: "0.0.0.0", // This makes the server accessible externally
     port: 5173, // Or whatever port Vite defaults to (commonly 5173)

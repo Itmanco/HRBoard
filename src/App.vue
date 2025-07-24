@@ -206,7 +206,6 @@ export default {
       // Authentication state
       loggedInUser: null,
       showLoginModal: false,
-      initialAuthCheckComplete: false,
       
       // Applicant form state (only required fields)
       applicantName: "",
@@ -241,12 +240,6 @@ export default {
   },
   mounted() {
     this.setupAuthListener();
-    // this.setupAuthListener().then(() => {
-    //     // Only show login modal if initial auth check is complete and no user is logged in
-    //     if (!this.loggedInUser && this.initialAuthCheckComplete) {
-    //       this.openLoginModal();
-    //     }
-    //   });
   },
   beforeUnmount() {
     if (this.unsubscribeApplicantListener) {
@@ -286,20 +279,6 @@ export default {
         this.loggedInUser = user; // Update loggedInUser reactive property
         if (user) {
           console.log("User logged in:", user.displayName);
-          // If you need to ensure a user is signed in with a custom token
-          // provided by the Canvas environment, do it here.
-          // This ensures the user is properly authenticated for Firestore rules.
-          // if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          //   await signInWithCustomToken(auth, __initial_auth_token)
-          //     .then(() => console.log("Signed in with custom token"))
-          //     .catch(error => console.error("Error signing in with custom token:", error));
-          // } else {
-          //   // If no custom token, sign in anonymously to satisfy basic auth rules for data access
-          //   await signInAnonymously(auth)
-          //     .then(() => console.log("Signed in anonymously"))
-          //     .catch(error => console.error("Error signing in anonymously:", error));
-          // }
-
           // Only start data listeners if a user is logged in (authenticated or anonymous)
           this.startApplicantListener();
           this.setupQuestionsListener(); // Call this here as it depends on loggedInUser
@@ -324,12 +303,8 @@ export default {
             this.unsubscribeQuestions();
             this.unsubscribeQuestions = null; // Clear reference
           }
-        
-          // If no user is logged in and the initial check is complete,
-          // show the login modal.
-          if (this.initialAuthCheckComplete) {
-            this.openLoginModal();
-          }
+                  
+            this.openLoginModal();          
         }
       });
     },
