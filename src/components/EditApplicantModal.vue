@@ -39,13 +39,13 @@
         <div class="form-group">
           <label for="editStatus">状態:</label>
           <select id="editStatus" v-model="editedApplicant.status">
-             <option value="New">新規</option>
-            <option value="Screening">選考</option>
-            <option value="Interview Scheduled">面接予定</option>
-            <option value="Interviewed">面接済</option>
-            <option value="Offer Extended">内定通知</option>
-            <option value="Hired">採用</option>
-            <option value="Rejected">不採用</option>
+             <option value="新規">新規</option>
+            <option value="選考">選考</option>
+            <option value="面接予定">面接予定</option>
+            <option value="面接済">面接済</option>
+            <option value="内定通知">内定通知</option>
+            <option value="採用">採用</option>
+            <option value="不採用">不採用</option>
           </select>
         </div>
         <!-- Keep Phone Number field -->

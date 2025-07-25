@@ -26,13 +26,13 @@
         <div class="form-group">
           <label for="status">状態:</label>
           <select id="status" v-model="status">
-            <option value="New">新規</option>
-            <option value="Screening">選考</option>
-            <option value="Interview Scheduled">面接予定</option>
-            <option value="Interviewed">面接済</option>
-            <option value="Offer Extended">内定通知</option>
-            <option value="Hired">採用</option>
-            <option value="Rejected">不採用</option>
+            <option value="新規">新規</option>
+            <option value="選考">選考</option>
+            <option value="面接予定">面接予定</option>
+            <option value="面接済">面接済</option>
+            <option value="内定通知">内定通知</option>
+            <option value="採用">採用</option>
+            <option value="不採用">不採用</option>
           </select>
         </div>
         <div class="form-group">
@@ -73,15 +73,6 @@
           ></VueDatePicker>
           <small>日時を選択</small>
         </div>
-
-        <div class="form-group">
-          <label>Simulated Submitting User:</label>
-          <p>{{ simulatedSubmitter }}</p>
-          <p class="form-help">
-            TODO:This field is for simulating submissions by a predefined user.
-          </p>
-        </div>
-
         <div class="modal-actions">
           <button type="submit" class="save-btn">応募者追加</button>
           <button type="button" @click="closeModal" class="cancel-btn">
@@ -122,7 +113,6 @@ export default {
       cvFile: null,
       cvUploadProgress: 0,
       cvUploadError: null,
-      simulatedSubmitter: "HR_Manager_A",
       interviewDate: null,
       localAvailablePositions: [],
     };
@@ -163,7 +153,6 @@ export default {
       this.cvFile = null;
       this.cvUploadProgress = 0;
       this.cvUploadError = null;
-      this.simulatedSubmitter = "HR_Manager_A";
       this.interviewDate = null;
       this.localAvailablePositions = []; // Clear local data on close
     },
@@ -273,7 +262,6 @@ export default {
           status: this.status,
           phoneNumber: this.applicantPhone,
           cvUrl: cvUrl,
-          submittedBy: this.simulatedSubmitter,
           addedByAuthUser: this.loggedInUser.email,
           timestamp: serverTimestamp(),
           interviewDate: this.interviewDate,

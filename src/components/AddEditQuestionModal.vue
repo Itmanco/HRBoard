@@ -12,7 +12,7 @@
             id="questionText"
             v-model="localQuestionText"
             rows="4"
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
           ></textarea>
         </div>
@@ -50,23 +50,23 @@
           />
           <label for="isMandatory" class="ml-2 text-gray-700 text-sm font-bold">必須設問</label>
         </div>
-
-        <div class="flex items-center justify-between">
+        
+        <div class="modal-actions flex space-x-8 mt-6">
           <button
             type="submit"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+            class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             {{ mode === 'add' ? '設問追加' : '設問を更新' }}
           </button>
+          <button
+            type="button"
+            @click="closeModal"
+            class="flex-1 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            キャンセル
+          </button>`
         </div>
       </form>
-
-      <button
-        @click="closeModal"
-        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 w-full"
-      >
-        キャンセル
-      </button>
     </div>
   </div>
 </template>
@@ -181,6 +181,14 @@ export default {
 </script>
 
 <style scoped>
+.modal-content textarea {
+  width: 100%;
+}
+
+.modal-actions > button:first-of-type {
+  margin-right: 1rem;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -204,5 +212,13 @@ export default {
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+}
+
+.modal-actions button:last-of-type {
+  background-color: #A0AEC0 !important; /* Tailwind's gray-400 */
+}
+
+.modal-actions button:last-of-type:hover {
+  background-color: #718096 !important; /* Tailwind's gray-500 */
 }
 </style>

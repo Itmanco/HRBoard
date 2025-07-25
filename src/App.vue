@@ -88,7 +88,7 @@
                 </td>
                 <td>
                   <button
-                    @click="openEditModal(applicant)"
+                    @click="openInterviewModal(applicant)"
                     class="icon-button interview-btn"
                   >
                     <img :src="InterviewIcon" alt="Interview" class="icon" />
@@ -154,6 +154,15 @@
       @close="showLoginModal = false" 
       @login-success="handleLoginSuccess" />
 
+    <InterviewModal
+      :isVisible="showInterviewModal"
+      :applicant="selectedApplicantForInterview"
+      :availablePositions="availablePositions"
+      :loggedInUser="loggedInUser"
+      @close="showInterviewModal = false; selectedApplicantForInterview = null"
+      @interview-saved="handleInterviewSaved"
+    />
+
   </div>
 </template>
 
@@ -183,7 +192,8 @@ import AddApplicantModal from "./components/AddApplicantModal.vue";
 import ManagePositionsModal from "./components/ManagePositionsModal.vue";
 import ManageQuestionsModal from "./components/ManageQuestionsModal.vue";
 import LoginModal from "./components/LoginModal.vue";
-import ProblemSelectTest from './components/ProblemSelectTest.vue'; // Import it
+import ProblemSelectTest from './components/ProblemSelectTest.vue';
+import InterviewModal from './components/InterviewModal.vue';
 import EditIcon from "./assets/icons/edit.svg";
 import DeleteIcon from "./assets/icons/delete.svg";
 import InterviewIcon from "./assets/icons/interview.svg";
@@ -200,6 +210,7 @@ export default {
     ManagePositionsModal,
     ManageQuestionsModal,
     LoginModal,
+    InterviewModal,
     ProblemSelectTest,
   },
   data() {
@@ -228,10 +239,12 @@ export default {
       selectedApplicant: null,
       showAddApplicantModal: false,
       showMenu: false,
-      showManagePositionsModal: false, // 👈 NEW: State for the new modal
+      showManagePositionsModal: false,
       availablePositions: [],
-      unsubscribePositions: null, // To store the unsubscribe function
+      unsubscribePositions: null,
       showManageQuestionsModal: false,
+      showInterviewModal: false,
+      selectedApplicantForInterview: null,
       // --- END MODAL RELATED DATA ---
       InterviewIcon,
       EditIcon,
@@ -278,12 +291,13 @@ export default {
         // The onAuthStateChanged listener will fire immediately with the current user state
       onAuthStateChanged(auth, (user) => {
         this.loggedInUser = user; // Update loggedInUser reactive property
-        if (user) {
+        if (user) {          
           console.log("User logged in:", user.displayName);
           // Only start data listeners if a user is logged in (authenticated or anonymous)
           this.startApplicantListener();
           this.setupQuestionsListener(); // Call this here as it depends on loggedInUser
           this.setupPositionsListener(); // Call this here to ensure permissions are ready
+          this.setInitialScale('0.75');
         } else {
           console.log("User logged out.");
           // Clear all user-specific data and unsubscribe listeners on logout
@@ -304,7 +318,7 @@ export default {
             this.unsubscribeQuestions();
             this.unsubscribeQuestions = null; // Clear reference
           }
-                  
+            
             this.openLoginModal();          
         }
       });
@@ -486,6 +500,16 @@ export default {
     closeManagePositionsModal() {
       this.showManagePositionsModal = false;
     }, 
+
+    openInterviewModal(applicant) {
+      this.selectedApplicantForInterview = applicant;
+      this.showInterviewModal = true;
+    },
+    handleInterviewSaved() {
+    // Optional: If saving notes affects the applicant's status in the list,
+    // you might re-fetch applicants here. Otherwise, it might not be needed.
+    //this.fetchApplicants();
+  },
     
     // --- END MODAL RELATED METHODS ---
 
@@ -555,22 +579,19 @@ export default {
 /* src/App.vue styles (or put in src/assets/main.css) */
 
 .app-header {
-  position: fixed; /* Fixes the header to the viewport */
-  top: 0; /* Aligns it to the top edge */
-  left: 0; /* Aligns it to the left edge */
-  width: 100%; /* Makes it span the full width */
-  margin-top: 5px auto;
-  margin-right: 8% auto;
-  margin-left: 8% auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   background-color: #282c34;
   color: white;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
-  align-items: center; /* Vertically center items */
-  padding: 10px 20px; /* Adjust padding as needed */
-  height: 60px; /* Give it a fixed height */
+  align-items: center;
+  padding: 10px 20px;
+  height: 60px;
 }
 
 .app-header h1 {
@@ -602,9 +623,9 @@ export default {
 }
 
 .container {
-  max-width: 1000px;
-  margin: 20px auto;
-  padding: 20px;
+  /* Default styles for all screen sizes (especially mobile) */
+  margin-top: 60px; /* To prevent content from being hidden by the fixed header */
+  padding: 10px; /* Reduced padding for mobile */
   background-color: #ffffff;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
@@ -853,6 +874,15 @@ table td select {
 
 .add-applicant-btn:hover {
   background-color: #218838;
+}
+
+@media (min-width: 768px) {
+  /* Styles for tablets and desktops */
+  .container {
+    max-width: 1000px; /* Apply max-width only on larger screens */
+    margin: 20px auto; /* Center it horizontally */
+    padding: 20px; /* More padding on larger screens */
+  }
 }
 
 @media (max-width: 1000px) {
