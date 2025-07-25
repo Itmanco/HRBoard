@@ -63,7 +63,7 @@
                 <th class="responsive-hide">提出者</th>
                 <th class="responsive-hide">提出日</th>
                 <th class="responsive-hide">履歴書</th>
-                <th>Actions</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>

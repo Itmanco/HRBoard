@@ -2,7 +2,7 @@
   <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
     <div class="modal-content">
       <h2 class="text-2xl font-bold mb-6 text-center text-blue-700">
-        {{ mode === 'add' ? '新規設問追加' : '設問編集 (Edit Question)' }}
+        {{ mode === 'add' ? '新規設問追加' : '設問編集' }}
       </h2>
 
       <form @submit.prevent="handleSubmit">
@@ -161,21 +161,19 @@ export default {
           questionData.createdAt = serverTimestamp();
           await addDoc(collection(db, "questions"), questionData);
           alert("Question added successfully!");
-          this.$emit("question-added"); // Notify parent
+          this.$emit("question-saved"); // Notify parent
         } else if (this.mode === 'edit' && this.questionToEdit && this.questionToEdit.id) {
           const questionRef = doc(db, "questions", this.questionToEdit.id);
           await updateDoc(questionRef, questionData);
           alert("Question updated successfully!");
-          this.$emit("question-updated"); // Notify parent
+          this.$emit("question-saved"); // Notify parent
         } else {
           console.error("Invalid mode or missing question ID for update.");
-          alert("An error occurred. Please check the console.");
           return;
         }
         this.closeModal();
       } catch (error) {
         console.error(`Error ${this.mode}ing question:`, error);
-        alert(`Failed to ${this.mode} question. Please try again.`);
       }
     },
   },

@@ -18,9 +18,9 @@
         <table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
           <thead class="bg-gray-100">
             <tr>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Question</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Linked Positions</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Actions</th>
+              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">質問</th>
+              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">関連職種</th>
+              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -33,8 +33,8 @@
                 <span v-else class="text-gray-500">None</span>
               </td>
               <td class="py-3 px-4 text-sm text-gray-700 whitespace-nowrap">
-                <button @click="openAddEditQuestionModal(question,'edit')" class="text-blue-600 hover:text-blue-800 font-medium mr-2">Edit</button>
-                <button @click="deleteQuestion(question.id)" class="text-red-600 hover:text-red-800 font-medium">Delete</button>
+                <button @click="openAddEditQuestionModal(question,'edit')" class="text-blue-600 hover:text-blue-800 font-medium mr-2">編集</button>
+                <button @click="deleteQuestion(question.id)" class="text-red-600 hover:text-red-800 font-medium">削除</button>
               </td>
             </tr>
           </tbody>
@@ -198,7 +198,7 @@ export default {
 .modal-content h2 {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #007bff;
+  color: #65a4e7;
 }
 
 .modal-actions {
@@ -218,7 +218,7 @@ export default {
 }
 
 .save-btn { /* Used for Add New Question button */
-  background-color: #007bff;
+  background-color: #539ae6;
   color: white;
 }
 
@@ -259,8 +259,8 @@ tbody tr:hover {
   background-color: #f0f4f8;
 }
 
-.text-blue-600 { color: #2563eb; }
-.hover\:text-blue-800:hover { color: #1e40af; }
+.text-blue-600 { color: #bac3d6; }
+.hover\:text-blue-800:hover { color: #4869d6; }
 .text-red-600 { color: #dc2626; }
 .hover\:text-red-800:hover { color: #b91c1c; }
 .font-medium { font-weight: 500; }
