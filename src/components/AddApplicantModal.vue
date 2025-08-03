@@ -1,286 +1,219 @@
 <template>
-  <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
+  <div v-if="isVisible" class="modal-overlay">
     <div class="modal-content">
-      <h2>新規応募者を追加</h2>
-      <form @submit.prevent="handleAddApplicant">
+      <h3>新規応募者追加</h3>
+      <p>現在編集中のセンター: <strong>{{ centerName }}</strong></p>
+      <hr />
+
+      <form @submit.prevent="addApplicant" class="applicant-form">
         <div class="form-group">
-          <label for="name">氏名:</label>
-          <input type="text" id="name" v-model="applicantName" required />
+          <label for="applicantName">氏名:</label>
+          <input type="text" id="applicantName" v-model="applicantName" required />
         </div>
+        
         <div class="form-group">
-          <label for="email">メール:</label>
-          <input type="email" id="email" v-model="applicantEmail" required />
+          <label for="applicantEmail">メールアドレス:</label>
+          <input type="email" id="applicantEmail" v-model="applicantEmail" required />
         </div>
+
         <div class="form-group">
-        <label for="position">応募職種:</label>
-        <select id="position" v-model="positionApplied" required>
-          <option value="" disabled selected>職種を選択</option>
-          <option v-for="pos in localAvailablePositions" :key="pos.id"  :value="pos.id">
-            {{ pos.name }}
-          </option>
-        </select>
-        <p v-if="availablePositions.length === 0" class="form-help">
-          募集職種がありません。メインメニューの「職種管理」から追加してください。
-        </p>
-      </div>
+          <label for="positionApplied">役職:</label>
+          <select id="positionApplied" v-model="positionApplied" required>
+            <option disabled value="">役職を選択してください</option>
+            <option v-for="position in filteredPositions" :key="position.id" :value="position.id">
+              {{ position.name }}
+            </option>
+          </select>
+        </div>
+
         <div class="form-group">
-          <label for="status">状態:</label>
+          <label for="interviewDate">面接日と時間:</label>
+          <input type="datetime-local" id="interviewDate" v-model="interviewDate" />
+        </div>
+        
+        <div class="form-group">
+          <label for="status">ステータス:</label>
           <select id="status" v-model="status">
             <option value="新規">新規</option>
-            <option value="選考">選考</option>
-            <option value="面接予定">面接予定</option>
-            <option value="面接済">面接済</option>
-            <option value="内定通知">内定通知</option>
+            <option value="面接済み">面接済み</option>
             <option value="採用">採用</option>
             <option value="不採用">不採用</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="applicantPhone">電話番号:</label>
-          <input type="tel" id="applicantPhone" v-model="applicantPhone" />
-        </div>
 
         <div class="form-group">
-          <label for="applicantCv">履歴書をアップロード（画像またはPDF）:</label>
-          <input
-            type="file"
-            id="applicantCv"
-            @change="handleCvFileUpload"
-            accept="image/*,application/pdf"
-          />
-          <p v-if="cvFile">
-            選択中のファイル: <strong>{{ cvFile.name }}</strong>
-          </p>
-          <p
-            v-if="cvUploadProgress > 0 && cvUploadProgress < 100"
-            class="upload-progress"
-          >
-            Uploading: {{ cvUploadProgress.toFixed(0) }}%
-          </p>
+          <label for="cvFile">履歴書ファイル (PDF, 最大5MB):</label>
+          <input type="file" id="cvFile" @change="handleCvFileChange" accept=".pdf" />
+          <p v-if="cvUploadProgress > 0 && cvUploadProgress < 100">アップロード中: {{ cvUploadProgress }}%</p>
           <p v-if="cvUploadError" class="error-message">{{ cvUploadError }}</p>
         </div>
 
-        <div class="form-group">
-          <label for="interviewDate">面接日:</label>
-          <VueDatePicker
-            v-model="interviewDate"
-            :teleport="true"
-            :enable-time-picker="true"
-            :month-change-on-scroll="false"
-            :format="dpFormat"
-            class="form-input"
-            uid="addInterviewDate"
-          ></VueDatePicker>
-          <small>日時を選択</small>
-        </div>
-        <div class="modal-actions">
-          <button type="submit" class="save-btn">応募者追加</button>
-          <button type="button" @click="closeModal" class="cancel-btn">
-            取消
-          </button>
+        <p v-if="applicantError" class="error-message">{{ applicantError }}</p>
+
+        <div class="form-actions">
+          <button type="submit" :disabled="!isFormValid">登録</button>
+          <button type="button" @click="closeModal" class="cancel-btn">キャンセル</button>
         </div>
       </form>
     </div>
   </div>
 </template>
 
-<script>
-import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
-import { db, storage } from "../firebaseConfig";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import VueDatePicker from '@vuepic/vue-datepicker';
-import '@vuepic/vue-datepicker/dist/main.css';
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { collection, addDoc, Timestamp, doc, getDoc, updateDoc } from 'firebase/firestore'; // updateDoc is needed here
+import { getAuth } from 'firebase/auth';
+import { db, storage } from '@/firebaseConfig';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { useCenterStore } from '@/stores/centerStore';
+import { storeToRefs } from 'pinia';
 
-const MAX_FILE_SIZE_MB = 5;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 5 MB in bytes
+// --- Props & Emits ---
+const props = defineProps({
+  isVisible: Boolean,
+  loggedInUser: Object,
+  availablePositions: {
+    type: Array,
+    default: () => []
+  },
+  selectedCenterId: String,
+});
 
-export default {
-  components: {
-    VueDatePicker,
-  },
-  props: {
-    isVisible: { type: Boolean, required: true },
-    loggedInUser: { type: Object, default: null },
-    availablePositions: { type: Array, default: () => []},
-  },
-  data() {
-    return {
-      applicantName: "",
-      applicantEmail: "",
-      positionApplied: "",
-      status: "New",
-      applicantPhone: "",
-      cvFile: null,
-      cvUploadProgress: 0,
-      cvUploadError: null,
-      interviewDate: null,
-      localAvailablePositions: [],
-    };
-  },
-  watch: {
-    availablePositions: {
-      handler(newVal) {
-        console.log("AddApplicantModal: Prop 'availablePositions' updated:", newVal);
-        this.localAvailablePositions = [...newVal];
-        console.log("AddApplicantModal: 'localAvailablePositions' updated to:", this.localAvailablePositions);
-      },
-      deep: true,
-      immediate: true,
-    },
-    isVisible(newVal) {
-      if (newVal) {
-        this.localAvailablePositions = [...this.availablePositions];
-        console.log("AddApplicantModal: Modal opened, 'localAvailablePositions' re-synced:", this.localAvailablePositions);
-        this.resetForm();
-      }
+const emit = defineEmits(['close', 'applicant-added']);
+
+// --- Pinia Store ---
+const centerStore = useCenterStore();
+const { allCentersMap } = storeToRefs(centerStore);
+
+// --- State ---
+const applicantName = ref('');
+const applicantEmail = ref('');
+const positionApplied = ref('');
+const cvFile = ref(null);
+const cvUploadProgress = ref(0);
+const cvUploadError = ref(null);
+const applicantError = ref(null);
+const positionNameForApplicant = ref('');
+const interviewDate = ref(''); // <--- NEW STATE
+const status = ref('新規'); // <--- NEW STATE
+
+// --- Computed Properties ---
+const isFormValid = computed(() => {
+  return applicantName.value.trim() !== '' && applicantEmail.value.trim() !== '' && positionApplied.value !== '';
+});
+
+const filteredPositions = computed(() => {
+  const selectedCenterId = props.selectedCenterId;
+  return props.availablePositions.filter(pos => pos.centerId === selectedCenterId);
+});
+
+const centerName = computed(() => {
+    if (props.selectedCenterId && allCentersMap.value.has(props.selectedCenterId)) {
+        return allCentersMap.value.get(props.selectedCenterId).name;
     }
-  },
-  mounted() {
-    console.log("AddApplicantModal: Mounted!");
-    // Log the prop value immediately on mount
-    console.log("AddApplicantModal: availablePositions on mount:", this.availablePositions);
-  },
-  unmounted() {
-    console.log("AddApplicantModal: Unmounted!");
-  },
-  methods: {
-    resetForm() {
-       this.applicantName = "";
-      this.applicantEmail = "";
-      this.positionApplied = "";
-      this.status = "New";
-      this.applicantPhone = "";
-      this.cvFile = null;
-      this.cvUploadProgress = 0;
-      this.cvUploadError = null;
-      this.interviewDate = null;
-      this.localAvailablePositions = []; // Clear local data on close
-    },
-    closeModal() {
-      // Reset form fields
-      this.resetForm();
-      this.$emit("close");
-    },
-    
-    // The dpFormat method will be used by the date picker to display the date
-    dpFormat(date) {
-      if (!date) return ''; // Handle case where no date is selected
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const day = date.getDate().toString().padStart(2, '0');
-      const year = date.getFullYear().toString().slice(-2);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      return `${month}/${day}/${year}, ${hours}:${minutes}`;
-    },
-    handleCvFileUpload(event) {
-      this.cvFile = event.target.files[0];
-      this.cvUploadError = null;
-      this.cvUploadProgress = 0;
+    return '不明なセンター';
+});
 
-      if (this.cvFile) {
-        // File Type Validation
-        if (
-          !this.cvFile.type.match("image.*") &&
-          !this.cvFile.type.match("application/pdf")
-        ) {
-          this.cvUploadError =
-            "画像・PDFのみ可";
-          this.cvFile = null;
-          event.target.value = "";
-          return;
+// --- Watchers ---
+watch(() => props.isVisible, (newVal) => {
+  if (newVal) {
+    resetForm();
+  }
+});
+
+watch(positionApplied, (newPositionId) => {
+    const position = props.availablePositions.find(p => p.id === newPositionId);
+    positionNameForApplicant.value = position ? position.name : '不明';
+});
+
+// --- Methods ---
+const resetForm = () => {
+  applicantName.value = '';
+  applicantEmail.value = '';
+  positionApplied.value = '';
+  cvFile.value = null;
+  cvUploadProgress.value = 0;
+  cvUploadError.value = null;
+  applicantError.value = null;
+  interviewDate.value = ''; // <--- RESET NEW FIELD
+  status.value = '新規';    // <--- RESET NEW FIELD
+};
+
+const closeModal = () => {
+  emit('close');
+};
+
+const handleCvFileChange = (event) => {
+  cvFile.value = event.target.files[0];
+};
+
+const addApplicant = async () => {
+  applicantError.value = null;
+  if (!isFormValid.value) {
+    applicantError.value = '全ての必須項目を入力してください。';
+    return;
+  }
+  
+  const centerId = props.selectedCenterId;
+  if (!centerId || centerId === 'all') {
+    applicantError.value = '応募者を割り当てるセンターが選択されていません。';
+    return;
+  }
+
+  try {
+    const applicantData = {
+      name: applicantName.value,
+      email: applicantEmail.value,
+      positionId: positionApplied.value,
+      positionName: positionNameForApplicant.value,
+      status: status.value, 
+      centerId: centerId,
+      addedbyUserId: props.loggedInUser.email,
+      timestamp: Timestamp.now(),
+      interviewDate: interviewDate.value ? new Date(interviewDate.value + ':00Z') : null,
+      cvUrl: '',
+    };
+
+    const docRef = await addDoc(collection(db, 'applicants'), applicantData);
+    const applicantId = docRef.id;
+
+    if (cvFile.value) {
+      const cvPath = `cvs/${applicantId}/${cvFile.value.name}`;
+      const cvRef = storageRef(storage, cvPath); // Changed from db to storage
+      const uploadTask = uploadBytesResumable(cvRef, cvFile.value);
+
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          cvUploadProgress.value = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        },
+        (error) => {
+          console.error('CVアップロードエラー:', error);
+          cvUploadError.value = '履歴書のアップロードに失敗しました。';
+        },
+        async () => {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          await updateDoc(docRef, { cvUrl: downloadURL });
+          console.log('CVアップロードが完了しました！');
+          alert('応募者が追加されました！');
+          emit('applicant-added');
+          closeModal();
         }
-        // File Size Validation
-        if (this.cvFile.size > MAX_FILE_SIZE_BYTES) {
-          this.cvUploadError = `ファイルサイズが ${MAX_FILE_SIZE_MB}MBを超過しています。`;
-          this.cvFile = null;
-          event.target.value = "";
-          return;
-        }
-      }
-    },
-    async handleAddApplicant() {
-      if (
-        !this.applicantName ||
-        !this.applicantEmail ||
-        !this.positionApplied
-      ) {
-        alert("必須項目をご入力ください。");
-        return;
-      }
-
-      if (!this.loggedInUser) {
-        alert("応募者の追加にはログインが必要です。");
-        return;
-      }
-
-      let cvUrl = null;
-      this.cvUploadError = null;
-      this.cvUploadProgress = 0;
-
-      if (this.cvFile) {
-        try {
-          const fileName = `cv_uploads/${this.applicantName.replace(
-            /\s/g,
-            "_"
-          )}_CV_${Date.now()}_${this.cvFile.name}`;
-          const storageRef = ref(storage, fileName);
-
-          await uploadBytes(storageRef, this.cvFile);
-          cvUrl = await getDownloadURL(storageRef);
-          console.log("CV Download URL:", cvUrl);
-        } catch (error) {
-          console.error("Error uploading CV:", error);
-          this.cvUploadError = "履歴書のアップロードに失敗しました。再度お試しください。";
-          alert("履歴書のアップロードに失敗しました。再度お試しください。");
-          return;
-        }
-      }
-
-      // Find the selected position object to get its name
-      const selectedPosition = this.availablePositions.find(
-        (p) => p.id === this.positionApplied
       );
-
-      if (!selectedPosition) {
-        alert("有効な役職を選択してください。");
-        return;
-      }
-
-      // MODIFIED: Convert JavaScript Date object (from datepicker) to Firestore Timestamp
-        if (this.interviewDate instanceof Date && !isNaN(this.interviewDate.getTime())) {
-          this.interviewDate = Timestamp.fromDate(this.interviewDate);
-        } else {
-          this.interviewDate = null; // Save as null if no date selected
-        }
-
-      try {
-        await addDoc(collection(db, "applicants"), {
-          name: this.applicantName,
-          email: this.applicantEmail,
-          positionId: this.positionApplied,
-          positionName: selectedPosition.name,
-          status: this.status,
-          phoneNumber: this.applicantPhone,
-          cvUrl: cvUrl,
-          addedByAuthUser: this.loggedInUser.email,
-          timestamp: serverTimestamp(),
-          interviewDate: this.interviewDate,
-        });
-
-        this.$emit("applicant-added"); // Emit event to parent
-        this.closeModal(); // Close modal after successful add
-        console.log("Applicant added successfully with CV!");
-      } catch (error) {
-        console.error("Error adding applicant: ", error);
-        alert("応募者の追加に失敗しました。再度お試しください。");
-      }
-    },
-  },
+    } else {
+      alert('応募者が追加されました！');
+      emit('applicant-added');
+      closeModal();
+    }
+  } catch (error) {
+    console.error('Error adding applicant:', error);
+    applicantError.value = '応募者の追加に失敗しました。';
+  }
 };
 </script>
 
 <style scoped>
-/* Modal Overlay */
+/* Your styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -291,109 +224,73 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Ensure it's on top of other content */
+  z-index: 1000;
 }
-
-/* Modal Content */
 .modal-content {
-  background: #fff;
+  background-color: white;
   padding: 30px;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   width: 90%;
-  max-width: 500px;
-  max-height: 90vh; /* Limit height to prevent overflow on small screens */
-  overflow-y: auto; /* Enable scrolling if content is too long */
-  position: relative;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
-
-.modal-content h2 {
+.modal-content h3 {
   margin-top: 0;
-  margin-bottom: 20px;
   color: #333;
-  text-align: center;
 }
-
-/* Form Group */
+.applicant-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 .form-group {
-  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start; /* Explicitly align items to the left */
 }
-
 .form-group label {
-  display: block;
-  margin-bottom: 5px;
   font-weight: bold;
-  color: #555;
 }
-
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="tel"],
+.form-group input,
 .form-group select {
-  width: calc(100% - 20px);
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 1em;
-  box-sizing: border-box; /* Include padding in width */
+  width: 100%; /* Ensure inputs take up full width for consistent layout */
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
-
-.form-group p {
-  font-size: 0.9em;
-  color: #777;
-  margin-top: 5px;
-}
-
-.form-help {
-  font-size: 0.8em;
-  color: #888;
-  margin-top: 5px;
-}
-
-/* Modal Actions */
-.modal-actions {
+.form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 25px;
 }
-
-.modal-actions button {
+.form-actions button {
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   font-size: 1em;
-  transition: background-color 0.3s ease;
 }
-
-.save-btn {
+.form-actions button[type="submit"] {
   background-color: #007bff;
   color: white;
 }
-
-.save-btn:hover {
+.form-actions button[type="submit"]:hover {
   background-color: #0056b3;
 }
-
 .cancel-btn {
   background-color: #6c757d;
   color: white;
 }
-
 .cancel-btn:hover {
   background-color: #5a6268;
 }
-
-.upload-progress {
-  font-size: 0.8em;
-  color: #007bff;
-  margin-top: 5px;
-}
-
 .error-message {
-  font-size: 0.8em;
-  color: #dc3545; /* Red color for error messages */
-  margin-top: 5px;
+  color: red;
+  font-size: 0.9em;
 }
 </style>

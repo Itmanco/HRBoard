@@ -1,155 +1,202 @@
 <template>
-  <div v-if="isVisible" class="modal-overlay" @click.self="closeModal">
+  <div v-if="isVisible" class="modal-overlay">
     <div class="modal-content">
-      <h2>役職を管理</h2>
-
-      <div class="add-position-section">
-        <h3>新規役職を追加</h3>
-        <form @submit.prevent="addPosition" class="add-position-form">
-          <input
-            type="text"
-            v-model="newPositionName"
-            placeholder="例：フロント、キッチン、バー"
-            required
-          />
-          <button type="submit" class="save-btn">役職を追加</button>
-        </form>
-        <p v-if="addError" class="error-message">{{ addError }}</p>
+      <div class="modal-header">
+        <h3>募集職管理</h3>
+        <button @click="closeModal" class="close-btn">×</button>
       </div>
+      
+      <p>現在編集中のセンター: <strong>{{ centerName }}</strong></p>
+      <hr />
 
-      <div class="current-positions-section">
-        <h3>現在募集中の役職</h3>
-        <p v-if="availablePositions.length === 0" class="no-positions-message">
-          まだ役職が定義されていません。
-        </p>
-        <ul v-else class="position-list">
-          <li v-for="position in availablePositions" :key="position.id">
-            <span>{{ position.name }}</span>
-            <button
-              @click="deletePosition(position.id)"
-              class="icon-button delete-btn"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                class="delete-icon"
-              >
-                <path
-                  d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+      <form @submit.prevent="addPosition" class="position-form">
+        <div class="form-group">
+          <label for="newPositionName">役職名:</label>
+          <input type="text" id="newPositionName" v-model="newPositionName" required />
+        </div>
+        
+        <p v-if="positionError" class="error-message">{{ positionError }}</p>
+        <button type="submit">追加</button>
+      </form>
+      
+      <hr />
+
+      <div class="existing-positions">
+        <h4>既存の役職 ({{ availablePositions.length }})</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>役職名</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="position in availablePositions" :key="position.id">
+              <td>
+                <span v-if="editingPositionId !== position.id">
+                  {{ position.name }}
+                </span>
+                <input
+                  v-else
+                  type="text"
+                  v-model="editingPositionName"
+                  @keyup.enter="saveEditedPosition"
+                  @keyup.esc="cancelEdit"
                 />
-              </svg>
-            </button>
-          </li>
-        </ul>
-      </div>
-
-      <div class="modal-actions">
-        <button type="button" @click="closeModal" class="cancel-btn">
-          閉じる
-        </button>
+              </td>
+              <td>
+                <button v-if="editingPositionId !== position.id" @click="editPosition(position)" class="edit-btn">編集</button>
+                <button v-else @click="saveEditedPosition" class="save-btn">保存</button>
+                <button @click="deletePosition(position.id)" class="delete-btn">削除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { collection, addDoc, deleteDoc, doc, query,orderBy,onSnapshot, where, getDocs,} from "firebase/firestore";
-import { db } from "../firebaseConfig"; // Ensure db is imported
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { collection, addDoc, query,where,getDocs, orderBy, onSnapshot, deleteDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/firebaseConfig';
+import { useCenterStore } from '@/stores/centerStore';
+import { storeToRefs } from 'pinia';
 
-export default {
-  props: {
-    isVisible: {
-      type: Boolean,
-      required: true,
-    },
-    // This prop will be passed from App.vue and kept updated via onSnapshot
-    availablePositions: {
-      type: Array,
-      default: () => [],
-    },
-    loggedInUser: {
-      // Optional: if you want to restrict who can manage positions
-      type: Object,
-      default: null,
-    },
+// --- Props & Emits ---
+const props = defineProps({
+  isVisible: Boolean,
+  loggedInUser: Object,
+  availablePositions: {
+    type: Array,
+    default: () => []
   },
-  data() {
-    return {
-      newPositionName: "",
-      addError: null,
+});
+
+const emit = defineEmits(['close']);
+
+// --- Pinia Store ---
+const centerStore = useCenterStore();
+const { selectedCenterId, allCentersMap } = storeToRefs(centerStore);
+
+// --- State ---
+const newPositionName = ref('');
+const positionError = ref(null);
+const editingPositionId = ref(null);
+const editingPositionName = ref('');
+
+// --- Computed Properties ---
+const centerName = computed(() => {
+    if (selectedCenterId.value && allCentersMap.value.has(selectedCenterId.value)) {
+        return allCentersMap.value.get(selectedCenterId.value).name;
+    }
+    return '不明なセンター';
+});
+
+// --- Watchers ---
+watch(() => props.isVisible, (newVal) => {
+    if (newVal) {
+        newPositionName.value = '';
+        positionError.value = null;
+    }
+});
+
+
+// --- Methods ---
+const closeModal = () => {
+  emit('close');
+};
+
+const addPosition = async () => {
+    positionError.value = null;
+    if (!newPositionName.value.trim()) {
+        positionError.value = "役職名を入力してください。";
+        return;
+    }
+
+    if (!selectedCenterId.value || selectedCenterId.value === 'all') {
+        positionError.value = "役職を追加するには、センターを選択する必要があります。";
+        return;
+    }
+
+    const newPosition = {
+        name: newPositionName.value.trim(),
+        centerId: selectedCenterId.value,
+        createdAt: Timestamp.now(),
     };
-  },
-  methods: {
-    closeModal() {
-      this.newPositionName = "";
-      this.addError = null;
-      this.$emit("close");
-    },
-    async addPosition() {
-      this.addError = null;
-      if (!this.newPositionName.trim()) {
-        this.addError = "役職名は空にできません。";
-        return;
-      }
-      // Optional: Check for duplicates before adding
-      if (
-        this.availablePositions.some(
-          (p) =>
-            p.name.toLowerCase() === this.newPositionName.trim().toLowerCase()
-        )
-      ) {
-        this.addError = "この役職は既に存在します。";
-        return;
-      }
 
-      try {
-        await addDoc(collection(db, "positions"), {
-          name: this.newPositionName.trim(),
-          createdAt: new Date(), // Or serverTimestamp() if imported
-        });
-        this.newPositionName = ""; // Clear input on success
-        console.log("Position added!");
-      } catch (error) {
+    try {
+        await addDoc(collection(db, "positions"), newPosition);
+        newPositionName.value = '';
+        positionError.value = null;
+    } catch (error) {
         console.error("Error adding position:", error);
-        this.addError = "役職の追加に失敗しました。再度お試しください。";
-      }
-    },
-    async deletePosition(positionId) {
-      if (!confirm("この役職を削除しますか？この操作は元に戻せません。")) {
-        return; // User cancelled
-      }
+        positionError.value = "役職の追加に失敗しました。権限が不足している可能性があります。";
+    }
+};
 
-      try {
-        // Step 1: Check if any applicants are associated with this position
-        const applicantsRef = collection(db, "applicants");
-        const q = query(applicantsRef, where("positionId", "==", positionId)); // Assuming 'position' field in applicant is the position's ID or name
-        const querySnapshot = await getDocs(q);
+const deletePosition = async (id) => {
+  // 1. Check for associated applicants first
+  const applicantsWithPositionQuery = query(
+    collection(db, 'applicants'),
+    where('positionId', '==', id)
+  );
+  
+  try {
+    const querySnapshot = await getDocs(applicantsWithPositionQuery);
+    
+    // 2. If any applicants are found, block the deletion
+    if (!querySnapshot.empty) {
+      alert("この役職は、応募者に割り当てられているため削除できません。");
+      return;
+    }
+    
+    // 3. If no applicants are found, proceed with deletion
+    if (confirm("この役職を削除しますか？")) {
+      await deleteDoc(doc(db, "positions", id));
+      positionError.value = null;
+    }
+  } catch (error) {
+    console.error("Error checking or deleting position:", error);
+    positionError.value = "役職の削除に失敗しました。";
+  }
+};
 
-        if (!querySnapshot.empty) {
-          alert("この役職は削除できません。現在、応募者が割り当てられています。");
-          return; // Stop deletion if applicants are found
-        }
+const editPosition = (position) => {
+  editingPositionId.value = position.id;
+  editingPositionName.value = position.name;
+};
 
-        // Step 2: If no applicants are found, proceed with deletion
-        const positionRef = doc(db, "positions", positionId);
-        console.error("Error deleting position:", positionId);
-        await deleteDoc(positionRef);
-        alert("役職を削除しました！");
-        //this.$emit("close"); // Close the modal or refresh the list
-        // You might want to emit an event to the parent (App.vue) to re-fetch positions if it's not real-time
-        // Or ensure App.vue's listener for positions is correctly updating.
-      } catch (error) {
-        console.error("Error deleting position:", error);
-        alert("役職の削除に失敗しました。再度お試しください。");
-      }
-    },
-  },
+const saveEditedPosition = async () => {
+  if (!editingPositionName.value.trim()) {
+    positionError.value = "役職名を入力してください。";
+    return;
+  }
+  
+  try {
+    const positionRef = doc(db, "positions", editingPositionId.value);
+    await updateDoc(positionRef, {
+      name: editingPositionName.value.trim(),
+    });
+    editingPositionId.value = null;
+    editingPositionName.value = '';
+    positionError.value = null;
+  } catch (error) {
+    console.error("Error updating position:", error);
+    positionError.value = "役職の更新に失敗しました。権限が不足している可能性があります。";
+  }
+};
+
+const cancelEdit = () => {
+  editingPositionId.value = null;
+  editingPositionName.value = '';
+  positionError.value = null;
 };
 </script>
 
 <style scoped>
-/* Modal Overlay - Reuse from AddApplicantModal/EditApplicantModal if global */
+/* Your styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -162,140 +209,117 @@ export default {
   align-items: center;
   z-index: 1000;
 }
-
-/* Modal Content - Reuse if global */
 .modal-content {
-  background: #fff;
+  background-color: white;
   padding: 30px;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
+  max-width: 600px;
+  max-height: 80vh;
   overflow-y: auto;
-  position: relative;
 }
-
-.modal-content h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #333;
-  text-align: center;
-}
-
-.add-position-section,
-.current-positions-section {
-  margin-bottom: 25px;
-  border: 1px solid #eee;
-  padding: 15px;
-  border-radius: 6px;
-}
-
-.add-position-section h3,
-.current-positions-section h3 {
-  margin-top: 0;
-  color: #555;
-  font-size: 1.1em;
-  margin-bottom: 15px;
-}
-
-.add-position-form {
-  display: flex;
-  gap: 10px;
-}
-
-.add-position-form input {
-  flex-grow: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.add-position-form button {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-}
-
-.add-position-form button:hover {
-  background-color: #0056b3;
-}
-
-.position-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.position-list li {
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
 }
-
-.position-list li:last-child {
-  border-bottom: none;
-}
-
-.position-list li span {
-  font-size: 1em;
+.modal-header h3 {
+  margin: 0;
   color: #333;
 }
-
-.no-positions-message {
-  text-align: center;
-  color: #888;
-  font-style: italic;
-  padding: 10px;
-}
-
-/* Re-using button styles from other modals if defined globally */
-.icon-button {
+.close-btn {
   background: none;
   border: none;
+  font-size: 24px;
   cursor: pointer;
-  padding: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: #888;
 }
-.delete-icon {
-  width: 20px;
-  height: 20px;
-  fill: #dc3545; /* Red color */
+p {
+  margin: 5px 0;
 }
-.delete-btn:hover .delete-icon {
-  fill: #e0939a;
+h4 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #333;
+}
+hr {
+  margin: 20px 0;
+  border: 0;
+  border-top: 1px solid #eee;
+}
+.position-form, .existing-positions {
+    margin-bottom: 20px;
+}
+.position-form .form-group {
+    margin-bottom: 15px;
+}
+.position-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.position-form button {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+.existing-positions table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.existing-positions th, .existing-positions td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+.existing-positions th {
+    background-color: #f2f2f2;
+}
+.existing-positions tr:nth-child(even) {
+    background-color: #f9f9f9;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 25px;
+/* Corrected button styles to target specific buttons */
+.existing-positions .edit-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 5px;
 }
-
-.cancel-btn {
-  background-color: #6c757d;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.existing-positions .edit-btn:hover {
+    background-color: #0056b3;
 }
-.cancel-btn:hover {
-  background-color: #5a6268;
+.existing-positions .delete-btn {
+    background-color: #dc3545;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }
-
-.error-message {
-  color: #dc3545;
-  font-size: 0.9em;
-  margin-top: 10px;
-  text-align: center;
+.existing-positions .delete-btn:hover {
+    background-color: #c82333;
+}
+.existing-positions .save-btn {
+    background-color: #28a745;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.existing-positions .save-btn:hover {
+    background-color: #218838;
 }
 </style>

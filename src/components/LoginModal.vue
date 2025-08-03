@@ -3,18 +3,13 @@
     <div class="modal-content">
       <h2>{{ isLoginMode ? "ログイン" : "登録" }}</h2>
 
-      <form @submit.prevent="isLoginMode ? loginUser() : registerUser()">
-        <div class="form-group" v-if="!isLoginMode">
-          <label for="authName">氏名:</label>
-          <input type="text" id="authName" v-model="authName" required />
-        </div>
+      <form @submit.prevent="loginUser()">
 
         <div class="form-group">
           <label for="authEmail">メールアドレス:</label>
           <input type="email" id="authEmail" v-model="authEmail" required />
         </div>
 
-        <!-- MODIFIED: New structure for password field and toggle button -->
         <div class="form-group">
           <label for="authPassword">パスワード:</label>
           <div class="input-with-button-wrapper"> 
@@ -44,21 +39,9 @@
         <!-- END MODIFIED -->
 
         <button type="submit" class="submit-btn">
-          {{ isLoginMode ? "ログイン" : "登録" }}
+          {{ "ログイン" }}
         </button>
       </form>
-
-      <p class="toggle-mode">
-        {{
-          isLoginMode
-            ? "アカウントをお持ちでないですか？"
-            : "既にアカウントをお持ちですか？"
-        }}
-        <br />
-        <span @click="toggleAuthMode">{{
-          isLoginMode ? "こちらでご登録ください。" : "こちらからログインしてください。"
-        }}</span>
-      </p>
       <p v-if="authError" class="error-message">{{ authError }}</p>
     </div>
   </div>
@@ -66,25 +49,19 @@
 
 <script>
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile,
 } from "firebase/auth";
 import { auth } from "../firebaseConfig"; // Assuming auth is exported from firebaseConfig
 
 export default {
   props: {
-    isVisible: {
-      type: Boolean,
-      required: true,
-    },
+    isVisible: Boolean,
   },
   data() {
     return {
       authEmail: "",
       authPassword: "",
       authName: "",
-      isLoginMode: true, // true for login, false for register
       authError: null,
       passwordVisible: false, // New data property to control password visibility
     };
@@ -103,37 +80,14 @@ export default {
       this.authPassword = "";
       this.authName = "";
       this.authError = null;
-      this.isLoginMode = true; // Default to login mode on open
       this.passwordVisible = false; // Reset password visibility
     },
     closeModal() {
       this.resetForm();
       this.$emit("close");
     },
-    toggleAuthMode() {
-      this.isLoginMode = !this.isLoginMode;
-      this.authError = null; // Clear error when switching mode
-    },
     togglePasswordVisibility() { // New method to toggle password visibility
       this.passwordVisible = !this.passwordVisible;
-    },
-    async registerUser() {
-      this.authError = null;
-      try {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          this.authEmail,
-          this.authPassword
-        );
-        const user = userCredential.user;
-        await updateProfile(user, { displayName: this.authName });
-        alert("登録が完了しました！ログインしました。");
-        this.$emit("login-success"); // Emit event to parent
-        this.closeModal();
-      } catch (error) {
-        console.error("Error registering:", error.message);
-        this.authError = error.message;
-      }
     },
     async loginUser() {
       this.authError = null;

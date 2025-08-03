@@ -1,8 +1,9 @@
 // src/firebaseConfig.js
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 import { getFirestore, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Import getAuth for authentication
 import { getStorage } from "firebase/storage";
+import { getFunctions } from 'firebase/functions';
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -18,13 +19,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Get Firestore instance
-const db = getFirestore(app);
-
 // Get Auth instance
 const auth = getAuth(app);
+// Get Firestore instance
+const db = getFirestore(app);
 // Get Storage instance
 const storage = getStorage(app);
+// Initialize Cloud Functions
+const functions = getFunctions(app); 
 
 // MODIFIED: Export firebaseConfig as a named export, along with others
-export { firebaseConfig, db, auth, serverTimestamp, storage };
+export { firebaseConfig, db, auth, serverTimestamp, storage, functions };

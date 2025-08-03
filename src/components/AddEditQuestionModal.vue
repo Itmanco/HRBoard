@@ -95,6 +95,7 @@ export default {
       type: Array,
       default: () => [],
     },
+    selectedCenterId: String, // Add this prop
   },
   data() {
     return {
@@ -151,6 +152,7 @@ export default {
 
       const questionData = {
         text: this.localQuestionText.trim(),
+        centerId: this.selectedCenterId, // <--- Use the prop here!
         isMandatory: this.localIsMandatory,
         positionIds: this.localSelectedPositionIds.length > 0 ? this.localSelectedPositionIds : [],
       };
