@@ -166,29 +166,31 @@ const setupAuthListener = () => {
         const idTokenResult = await user.getIdTokenResult(true);
         loggedInUser.value.customClaims = idTokenResult.claims;
         console.log('App.vue: User Custom Claims:', loggedInUser.value.customClaims);
+        router.push('/');
+        
+        // const isUserAdmin = isSuperAdmin.value || isCenterAdmin.value;
 
-        const isUserAdmin = isSuperAdmin.value || isCenterAdmin.value;
+        // if (isUserAdmin) {
+        //   if (!router.currentRoute.value.path.startsWith('/admin')) {
+        //     router.push('/admin/users');
+        //   } else{
+        //     router.push('/');
+        //   }
+        // } else {
+        //   const userCenterIds = loggedInUser.value.customClaims.centerIds || [];
+        //   if (userCenterIds.length === 1) {
+        //     centerStore.selectedCenterId = userCenterIds[0];
+        //   }
+        //   if (router.currentRoute.value.path !== '/') {
+        //     router.push('/');
+        //   }
+        // }
 
-        if (isUserAdmin) {
-          if (!router.currentRoute.value.path.startsWith('/admin')) {
-            router.push('/admin/users');
-          } else{
-            router.push('/');
-          }
-        } else {
-          const userCenterIds = loggedInUser.value.customClaims.centerIds || [];
-          if (userCenterIds.length === 1) {
-            centerStore.selectedCenterId = userCenterIds[0];
-          }
-          if (router.currentRoute.value.path !== '/') {
-            router.push('/');
-          }
-        }
+
       } catch (error) {
         console.error('App.vue: Error fetching ID token result:', error);
         logoutUser();
       }
-
       setupPositionsListener();
       setupQuestionsListener();
       showLoginModal.value = false;
