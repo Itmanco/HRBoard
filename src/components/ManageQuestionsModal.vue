@@ -9,7 +9,8 @@
       <p>現在編集中のセンター: <strong>{{ centerName }}</strong></p>
       <hr />
 
-      <form @submit.prevent="addQuestion" class="question-form">
+      <!-- Add a ref to the form for scrolling -->
+      <form @submit.prevent="saveQuestion" class="question-form" ref="editForm">
         <div class="form-group">
           <label for="newQuestionText">質問内容:</label>
           <textarea id="newQuestionText" v-model="newQuestionText" rows="3" required></textarea>
@@ -36,13 +37,37 @@
         </div>
 
         <p v-if="questionError" class="error-message">{{ questionError }}</p>
-        <button type="submit">質問を追加</button>
+        <div class="form-actions">
+          <button type="submit">{{ isEditing ? '更新' : '質問を追加' }}</button>
+          <button v-if="isEditing" type="button" @click="cancelEdit">キャンセル</button>
+        </div>
       </form>
       
       <hr />
 
       <div class="existing-questions">
-        <h4>既存の設問 ({{ availableQuestions.length }})</h4>
+        <h4>既存の設問 ({{ filteredQuestions.length }})</h4>
+        
+        <!-- Combined Filter & Search Controls -->
+        <div class="filter-controls">
+          <div>
+            <label for="positionFilter">役職で絞り込み:</label>
+            <select v-model="selectedPositionId" id="positionFilter">
+              <option value="all">すべての役職</option>
+              <option 
+                v-for="position in availablePositions" 
+                :key="position.id" 
+                :value="position.id">
+                {{ position.name }}
+              </option>
+            </select>
+          </div>
+          <div>
+            <label for="questionSearch">質問を検索:</label>
+            <input type="text" v-model="searchText" id="questionSearch" placeholder="質問テキストを入力..." />
+          </div>
+        </div>
+
         <table>
           <thead>
             <tr>
@@ -52,15 +77,39 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="question in availableQuestions" :key="question.id">
-              <td>{{ question.text }}</td>
+            <tr v-for="question in filteredQuestions" :key="question.id">
+              <td>
+                <!-- In-place editing functionality -->
+                <span v-if="inPlaceEditingQuestionId !== question.id" @dblclick="startInPlaceEdit(question)">
+                  {{ question.text }}
+                </span>
+                <textarea 
+                  v-else
+                  v-model="inPlaceEditText"
+                  @blur="saveInPlaceEdit(question.id)"
+                  @keydown.enter.prevent="saveInPlaceEdit(question.id)"
+                  rows="3"
+                  class="in-place-edit-input"
+                ></textarea>
+              </td>
               <td>
                 <span v-for="posId in question.positionIds" :key="posId" class="position-tag">
                   {{ getPositionName(posId) }}
                 </span>
               </td>
               <td>
-                <button @click="deleteQuestion(question.id)">削除</button>
+                <button 
+                  v-if="inPlaceEditingQuestionId === question.id"
+                  @click="saveInPlaceEdit(question.id)">保存</button>
+                <button 
+                  v-if="inPlaceEditingQuestionId === question.id"
+                  @click="cancelInPlaceEdit()">キャンセル</button>
+                <button 
+                  v-if="inPlaceEditingQuestionId !== question.id"
+                  @click="editQuestion(question)">編集</button>
+                <button 
+                  v-if="inPlaceEditingQuestionId !== question.id"
+                  @click="deleteQuestion(question.id)">削除</button>
               </td>
             </tr>
           </tbody>
@@ -72,7 +121,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, where, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, where, Timestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/firebaseConfig';
 import { useCenterStore } from '@/stores/centerStore';
 import { storeToRefs } from 'pinia';
@@ -101,7 +150,19 @@ const { selectedCenterId, allCentersMap } = storeToRefs(centerStore);
 const newQuestionText = ref('');
 const positionIds = ref([]);
 const questionError = ref(null);
-const isMandatory = ref(false); // <--- NEW STATE
+const isMandatory = ref(false);
+const selectedPositionId = ref('all');
+const searchText = ref('');
+const isEditing = ref(false); // Tracks if the form is in 'edit' mode
+const editingQuestionId = ref(null); // Stores the ID of the question being edited
+
+// New state for in-place editing
+const inPlaceEditingQuestionId = ref(null);
+const inPlaceEditText = ref('');
+
+// Ref for the form element to allow programmatic scrolling
+const editForm = ref(null);
+
 
 // --- Computed Properties ---
 const centerName = computed(() => {
@@ -111,13 +172,39 @@ const centerName = computed(() => {
     return '不明なセンター';
 });
 
+const filteredQuestions = computed(() => {
+  let questions = props.availableQuestions;
+
+  // Filter by position
+  if (selectedPositionId.value !== 'all') {
+    questions = questions.filter(question =>
+      question.positionIds.includes(selectedPositionId.value)
+    );
+  }
+
+  // Filter by search text (case-insensitive)
+  if (searchText.value.trim() !== '') {
+    const searchLower = searchText.value.trim().toLowerCase();
+    questions = questions.filter(question =>
+      question.text.toLowerCase().includes(searchLower)
+    );
+  }
+
+  return questions;
+});
+
 // --- Watchers ---
 watch(() => props.isVisible, (newVal) => {
     if (newVal) {
         newQuestionText.value = '';
         positionIds.value = [];
         questionError.value = null;
-        isMandatory.value = false; // <--- RESET NEW STATE
+        isMandatory.value = false;
+        selectedPositionId.value = 'all';
+        searchText.value = '';
+        isEditing.value = false; // Reset editing state on modal open
+        editingQuestionId.value = null;
+        inPlaceEditingQuestionId.value = null;
     }
 });
 
@@ -144,37 +231,97 @@ const togglePosition = (positionId) => {
   }
 };
 
+const saveQuestion = async () => {
+  questionError.value = null;
+  if (!newQuestionText.value.trim() || positionIds.value.length === 0) {
+      questionError.value = "質問内容と割り当てる役職を選択してください。";
+      return;
+  }
 
-const addQuestion = async () => {
+  if (!selectedCenterId.value || selectedCenterId.value === 'all') {
+      questionError.value = "質問を追加するには、センターを選択する必要があります。";
+      return;
+  }
+
+  const questionData = {
+      text: newQuestionText.value.trim(),
+      positionIds: positionIds.value,
+      centerId: selectedCenterId.value,
+      isMandatory: isMandatory.value,
+  };
+
+  try {
+    if (isEditing.value) {
+      // Update existing question
+      await setDoc(doc(db, "questions", editingQuestionId.value), questionData, { merge: true });
+      questionError.value = "質問が更新されました！";
+    } else {
+      // Add new question
+      questionData.createdAt = Timestamp.now();
+      await addDoc(collection(db, "questions"), questionData);
+      questionError.value = "質問が追加されました！";
+    }
+    
+    // Clear the form after saving
+    newQuestionText.value = '';
+    positionIds.value = [];
+    isMandatory.value = false;
+    isEditing.value = false;
+    editingQuestionId.value = null;
+    
+  } catch (error) {
+    console.error("Error saving question:", error);
+    questionError.value = "質問の保存に失敗しました。権限が不足している可能性があります。";
+  }
+};
+
+const editQuestion = (question) => {
+  isEditing.value = true;
+  editingQuestionId.value = question.id;
+  newQuestionText.value = question.text;
+  positionIds.value = [...question.positionIds]; // Use spread to create a new array
+  isMandatory.value = question.isMandatory || false;
+  
+  // New: Scroll the form into view
+  if (editForm.value) {
+    editForm.value.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+};
+
+const cancelEdit = () => {
+  isEditing.value = false;
+  editingQuestionId.value = null;
+  newQuestionText.value = '';
+  positionIds.value = [];
+  isMandatory.value = false;
+  questionError.value = null;
+};
+
+const startInPlaceEdit = (question) => {
+  inPlaceEditingQuestionId.value = question.id;
+  inPlaceEditText.value = question.text;
+};
+
+const saveInPlaceEdit = async (questionId) => {
+  if (inPlaceEditText.value.trim() === '') {
+    // If the text is empty, maybe just cancel the edit
+    cancelInPlaceEdit();
+    return;
+  }
+  try {
+    const questionDocRef = doc(db, "questions", questionId);
+    await setDoc(questionDocRef, { text: inPlaceEditText.value.trim() }, { merge: true });
+    inPlaceEditingQuestionId.value = null;
     questionError.value = null;
-    if (!newQuestionText.value.trim() || positionIds.value.length === 0) {
-        questionError.value = "質問内容と割り当てる役職を選択してください。";
-        return;
-    }
+  } catch (error) {
+    console.error("Error updating question text:", error);
+    questionError.value = "質問テキストの更新に失敗しました。";
+  }
+};
 
-    if (!selectedCenterId.value || selectedCenterId.value === 'all') {
-        questionError.value = "質問を追加するには、センターを選択する必要があります。";
-        return;
-    }
-
-    const newQuestion = {
-        text: newQuestionText.value.trim(),
-        positionIds: positionIds.value,
-        centerId: selectedCenterId.value,
-        isMandatory: isMandatory.value, // <--- ADD NEW FIELD
-        createdAt: Timestamp.now(),
-    };
-
-    try {
-        await addDoc(collection(db, "questions"), newQuestion);
-        newQuestionText.value = '';
-        positionIds.value = [];
-        questionError.value = null;
-        isMandatory.value = false; // <--- RESET NEW STATE
-    } catch (error) {
-        console.error("Error adding question:", error);
-        questionError.value = "質問の追加に失敗しました。権限が不足している可能性があります。";
-    }
+const cancelInPlaceEdit = () => {
+  inPlaceEditingQuestionId.value = null;
+  inPlaceEditText.value = '';
 };
 
 const deleteQuestion = async (id) => {
@@ -263,8 +410,31 @@ hr {
     border: 1px solid #ccc;
     border-radius: 4px;
 }
-.question-form button[type="submit"] {
+.in-place-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-size: 0.9em;
+  padding: 5px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+}
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-actions button[type="submit"] {
     background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+}
+.form-actions button[type="button"] {
+    background-color: #6c757d;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -318,17 +488,43 @@ hr {
     background-color: #f9f9f9;
 }
 .existing-questions button {
-    background-color: #dc3545;
+    background-color: #6c757d;
     color: white;
     padding: 5px 10px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    margin-right: 5px;
 }
-.form-group-inline {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 15px;
+
+.existing-questions button:nth-of-type(2) {
+    background-color: #dc3545;
+}
+
+.filter-controls {
+  margin-bottom: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+.filter-controls > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-controls label {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.filter-controls select, .filter-controls input {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background-color: white;
+  min-width: 150px;
 }
 </style>
