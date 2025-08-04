@@ -1,6 +1,6 @@
 <template>
   <div class="admin-dashboard">
-    <h1>スーパー管理者ダッシュボード</h1>
+    <h1>管理者ダッシュボード</h1>
     <nav class="admin-nav">
       <ul>
         <li><router-link to="/admin/users">ユーザー管理</router-link></li>
