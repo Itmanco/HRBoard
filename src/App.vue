@@ -172,6 +172,8 @@ const setupAuthListener = () => {
         if (isUserAdmin) {
           if (!router.currentRoute.value.path.startsWith('/admin')) {
             router.push('/admin/users');
+          } else{
+            router.push('/');
           }
         } else {
           const userCenterIds = loggedInUser.value.customClaims.centerIds || [];
